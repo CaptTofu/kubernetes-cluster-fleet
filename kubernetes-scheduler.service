@@ -1,0 +1,38 @@
+[Unit]
+Description=Launch dockerized kubernetes hyperkube scheduler
+After=early-docker.target docker.service network-online.target kubernetes_apiserver.service
+Before=docker.target
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=5
+LimitNOFILE=infinity
+EnvironmentFile=/etc/environment
+EnvironmentFile=/etc/kube.env
+ExecStartPre=-/usr/bin/mkdir -p /var/log/kubernetes/scheduler
+ExecStart=/bin/sh -c '/usr/bin/docker run \
+  -e KUBERNETES_API_ENDPOINT=$(/usr/bin/etcdctl get /cplane.picasso/kubernetes_api_endpoint) \
+  --rm \
+  --name kubernetes-scheduler \
+  --net=host \
+  --privileged \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /var/log/kubernetes/scheduler:/var/log/kubernetes/scheduler \
+  quay.io/coreos/hyperkube:v1.2.4_coreos.1 \
+    ./hyperkube scheduler \
+    --address=0.0.0.0 \
+    --alsologtostderr=false \
+    --log_dir=/var/log/kubernetes/scheduler \
+    --logtostderr=false \
+    --master=${KUBERNETES_API_ENDPOINT} \
+    --port=10251 \
+    --v=1'
+
+
+[Install]
+WantedBy=multi-user.target
+
+[X-Fleet]
+MachineOf=kubernetes-apiserver.service

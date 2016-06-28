@@ -1,0 +1,47 @@
+[Unit]
+Description=Launches the kubelet service.
+After=early-docker.target docker.service network-online.target
+Before=docker.target
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=5
+EnvironmentFile=/etc/kubernetes/kubernetes.env
+Environment=KUBELET_LOG_DIR=${KUBERNETES_LOG_DIR}/kubelet
+ExecStartPre=-/usr/bin/bash -c "/usr/bin/systemctl set-environment KUBERNETES_API_ENDPOINT=${KUBERNETES_API_SCHEME}://$(/usr/bin/etcdctl get /registry/services/endpoints/default/kubernetes|/usr/bin/jq --raw-output '.subsets[0].addresses[0].ip'):${KUBERNETES_API_PORT}"
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_CERT_DIR}
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_LOG_DIR}
+ExecStartPre=-/usr/bin/mkdir -p ${KUBELET_LOG_DIR}
+ExecStartPre=-/usr/bin/docker kill kubelet.service
+ExecStartPre=-/usr/bin/docker rm kubelet.service
+ExecStart=/usr/bin/docker run
+  -e KUBERNETES_API_SERVERS=${KUBERNETES_API_ENDPOINT} \
+  --name kubelet.service \
+  --net=host \
+  --privileged \
+  --volume=/:/rootfs:ro \
+  --volume=/sys:/sys:ro \
+  --volume=/var/lib/docker/:/var/lib/docker:rw \
+  --volume=/var/lib/kubelet/:/var/lib/kubelet:rw \
+  --volume=/var/run:/var/run:rw \
+  --net=host \
+  --pid=host \
+  --privileged \
+  ${HYPERKUBE_IMG}:${HYPERKUBE_VER} \
+    ./hyperkube kubelet \
+      --containerized \
+      --api-servers=${KUBERNETES_API_ENDPOINT} \
+      --allow-privileged \
+      --port=${KUBELET_PORT} \
+      --log_dir=${KUBELET_LOG_DIR} \
+      --enable-server=True \
+      --enable-debugging-handlers=True \
+      --config=/etc/kubernetes/manifests \
+      --allow-privileged \
+      --v=2 \
+      --hostname-override=${HOSTNAME_OVERRIDE}
+
+[Install]
+WantedBy=multi-user.target

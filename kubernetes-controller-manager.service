@@ -1,0 +1,44 @@
+[Unit]
+Description=Launch dockerized kubernetes hyperkube controller-manager
+After=early-docker.target docker.service network-online.target kubernetes_apiserver.service 
+Before=docker.target
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=5
+LimitNOFILE=infinity
+EnvironmentFile=/etc/environment
+EnvironmentFile=/etc/kubernetes.env
+ExecStartPre=-/usr/bin/bash -c "/usr/bin/systemctl set-environment KUBERNETES_API_ENDPOINT=${KUBERNETES_API_SCHEME}://$(/usr/bin/etcdctl get /registry/services/endpoints/default/kubernetes|/usr/bin/jq --raw-output '.subsets[0].addresses[0].ip'):${KUBERNETES_API_PORT}"
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_LOG_DIR}/controller-manager
+ExecStartPre=-/usr/bin/docker kill kubernetes-controller-manager
+ExecStartPre=-/usr/bin/docker rm kubernetes-controller-manager
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_LOG_DIR}/controller-manager
+
+ExecStart=/usr/bin/docker run \
+  --rm \
+  -e KUBERNETES_API_ENDPOINT=${KUBERNETES_API_ENDPOINT} \
+  --name kubernetes-controller-manager \
+  --net=host \
+  --privileged \
+  -v ${KUBERNETES_LOG_DIR}/controller-manager:${KUBERNETES_LOG_DIR}/controller-manager \
+  quay.io/coreos/hyperkube:v1.2.4_coreos.1 \
+    ./hyperkube controller-manager \
+    --address=0.0.0.0 \
+    --logtostderr=false \
+    --log_dir=/var/log/kubernetes/controller-manager \
+    --logtostderr=false \
+    --master=${KUBERNETES_API_ENDPOINT} \
+    --port=10252 \
+    --cloud-provider="" \
+    --v=1
+
+ExecStop=/usr/bin/docker kill kubernetes-controller-manager
+
+[Install]
+WantedBy=multi-user.target
+
+[X-Fleet]
+MachineOf=kubernetes-apiserver.service

@@ -1,0 +1,30 @@
+[Unit]
+Description=Sets up Kubernetes environment variables
+After=early-docker.target docker.service network-online.target
+Before=docker.target kubernetes-apiserver kubernetes-controller-manager kubernetes-scheduler
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+Type=oneshot
+Environment=HYPERKUBE_IMG=quay.io/coreos/hyperkube
+Environment=HYPERKUBE_VER=v1.2.4_coreos.1
+Environment=KUBERNETES_CERT_DIR=/etc/certs/kubernetes
+Environment=KUBERNETES_LOG_DIR=/var/log/kubernetes
+Environment=CLUSTER_IP_RANGE=10.100.0.0/16
+Environment=KUBERNETES_MANIFEST_DIR=/etc/kubernetes/manifests
+Environment=KUBELET_PORT=
+Environment=DOCKER_SOCK=/var/run/docker.sock
+ExecStart=/usr/bin/sh -c "/usr/bin/echo HYPERKUBE_IMG=${HYPERKUBE_IMG} > /etc/kubernetes.env"
+ExecStart=/usr/bin/sh -c "/usr/bin/echo HYPERKUBE_VER=${HYPERKUBE_VER} >> /etc/kubernetes.env"
+ExecStart=/usr/bin/sh -c "/usr/bin/echo KUBERNETES_CERT_DIR=${KUBERNETES_CERT_DIR} >> /etc/kubernetes.env"
+ExecStart=/usr/bin/sh -c "/usr/bin/echo KUBERNETES_MANIFEST_DIR=${KUBERNETES_MANIFEST_DIR} >> /etc/kubernetes.env"
+ExecStart=/usr/bin/sh -c "/usr/bin/echo KUBERNETES_LOG_DIR=${KUBERNETES_LOG_DIR} >> /etc/kubernetes.env"
+ExecStart=/usr/bin/sh -c "/usr/bin/echo CLUSTER_IP_RANGE=${CLUSTER_IP_RANGE} >> /etc/kubernetes.env"
+ExecStart=/usr/bin/etcdctl set /cplane.picasso/kubernetes_api_endpoint ${COREOS_PRIVATE_IPV4}:8080
+
+[Install]
+WantedBy=multi-user.target
+
+[X-Fleet]
+MachineOf=kubernetes-apiserver.service
