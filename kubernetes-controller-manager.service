@@ -12,14 +12,15 @@ LimitNOFILE=infinity
 EnvironmentFile=/etc/environment
 EnvironmentFile=/etc/kubernetes.env
 ExecStartPre=-/usr/bin/bash -c "/usr/bin/systemctl set-environment KUBERNETES_API_ENDPOINT=${KUBERNETES_API_SCHEME}://$(/usr/bin/etcdctl get /registry/services/endpoints/default/kubernetes|/usr/bin/jq --raw-output '.subsets[0].addresses[0].ip'):${KUBERNETES_API_PORT}"
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_CERT_DIR}
 ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_LOG_DIR}/controller-manager
 ExecStartPre=-/usr/bin/docker kill kubernetes-controller-manager
 ExecStartPre=-/usr/bin/docker rm kubernetes-controller-manager
 ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_LOG_DIR}/controller-manager
 
+#  --rm
 ExecStart=/usr/bin/docker run \
-  --rm \
-  -e KUBERNETES_API_ENDPOINT=${KUBERNETES_API_ENDPOINT} \
+ -e KUBERNETES_API_ENDPOINT=${KUBERNETES_API_ENDPOINT} \
   --name kubernetes-controller-manager \
   --net=host \
   --privileged \
@@ -34,8 +35,6 @@ ExecStart=/usr/bin/docker run \
     --port=10252 \
     --cloud-provider="" \
     --v=1
-
-ExecStop=/usr/bin/docker kill kubernetes-controller-manager
 
 [Install]
 WantedBy=multi-user.target

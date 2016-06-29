@@ -10,10 +10,15 @@ Restart=always
 RestartSec=5
 LimitNOFILE=infinity
 EnvironmentFile=/etc/environment
-EnvironmentFile=/etc/kube.env
-ExecStartPre=-/usr/bin/mkdir -p /var/log/kubernetes/scheduler
+EnvironmentFile=/etc/kubernetes.env
+ExecStartPre=-/usr/bin/bash -c "/usr/bin/systemctl set-environment KUBERNETES_API_ENDPOINT=${KUBERNETES_API_SCHEME}://$(/usr/bin/etcdctl get /registry/services/endpoints/default/kubernetes|/usr/bin/jq --raw-output '.subsets[0].addresses[0].ip'):${KUBERNETES_API_PORT}"
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_LOG_DIR}/scheduler
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_CERT_DIR}
+ExecStartPre=-/usr/bin/docker kill kubernetes-scheduler
+ExecStartPre=-/usr/bin/docker rm kubernetes-scheduler
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_LOG_DIR}/scheduler
 ExecStart=/bin/sh -c '/usr/bin/docker run \
-  -e KUBERNETES_API_ENDPOINT=$(/usr/bin/etcdctl get /cplane.picasso/kubernetes_api_endpoint) \
+  -e KUBERNETES_API_ENDPOINT=${KUBERNETES_API_ENDPOINT} \
   --rm \
   --name kubernetes-scheduler \
   --net=host \
@@ -22,11 +27,11 @@ ExecStart=/bin/sh -c '/usr/bin/docker run \
   -v /var/log/kubernetes/scheduler:/var/log/kubernetes/scheduler \
   quay.io/coreos/hyperkube:v1.2.4_coreos.1 \
     ./hyperkube scheduler \
+    --master=${KUBERNETES_API_ENDPOINT} \
     --address=0.0.0.0 \
     --alsologtostderr=false \
     --log_dir=/var/log/kubernetes/scheduler \
     --logtostderr=false \
-    --master=${KUBERNETES_API_ENDPOINT} \
     --port=10251 \
     --v=1'
 

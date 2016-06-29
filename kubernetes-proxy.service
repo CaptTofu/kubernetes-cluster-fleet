@@ -1,0 +1,34 @@
+[Unit]
+Description=Launches the kubernetes-proxy service.
+After=early-docker.target docker.service network-online.target
+Before=docker.target
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=5
+Environment=/etc/environment
+EnvironmentFile=/etc/kubernetes.env
+ExecStartPre=-/usr/bin/bash -c "/usr/bin/systemctl set-environment KUBERNETES_API_ENDPOINT=${KUBERNETES_API_SCHEME}://$(/usr/bin/etcdctl get /registry/services/endpoints/default/kubernetes|/usr/bin/jq --raw-output '.subsets[0].addresses[0].ip'):${KUBERNETES_API_PORT}"
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_CERT_DIR}
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_LOG_DIR}
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_PROXY_LOG_DIR}
+ExecStartPre=-/usr/bin/docker stop kubernetes-proxy.service
+ExecStartPre=-/usr/bin/docker rm kubernetes-proxy.service
+ExecStart=/usr/bin/docker run --rm \
+  --name kubernetes-proxy.service \
+  --net=host \
+  --privileged \
+  --volume=${KUBERNETES_LOG_DIR}/kubernetes-proxy:${KUBERNETES_LOG_DIR}/kubernetes-proxy:rw \
+  ${HYPERKUBE_IMG}:${HYPERKUBE_VER} \
+    ./hyperkube proxy \
+      --log_dir=${KUBERNETES_LOG_DIR}/kubernetes-proxy \
+      --master=${KUBERNETES_API_ENDPOINT} \
+      --proxy-mode=iptables 
+
+[Install]
+WantedBy=multi-user.target
+
+[X-Fleet]
+MachineOf=kubelet.service

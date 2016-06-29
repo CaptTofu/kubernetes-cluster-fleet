@@ -10,11 +10,13 @@ Restart=always
 RestartSec=5
 LimitNOFILE=infinity
 EnvironmentFile=/etc/environment
-ExecStartPre=-/usr/bin/mkdir -p /var/log/kubernetes/apiserver
+EnvironmentFile=/etc/kubernetes.env
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_LOG_DIR}/apiserver
+ExecStartPre=-/usr/bin/mkdir -p ${KUBERNETES_CERT_DIR}
 #ExecStartPre=-/usr/bin/docker kill kubernetes-apiserver
 #ExecStartPre=-/usr/bin/docker rm kubernetes-apiserver
 ExecStart=/usr/bin/docker run \
-  -e COREOS_PRIVATE_IPV4 \
+  -e COREOS_PRIVATE_IPV4=${COREOS_PRIVATE_IPV4} \
   --rm \
   --name kubernetes-apiserver \
   --net=host \
