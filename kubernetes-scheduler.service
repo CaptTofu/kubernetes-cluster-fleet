@@ -35,9 +35,5 @@ ExecStart=/bin/sh -c '/usr/bin/docker run \
     --port=10251 \
     --v=1'
 
-
-[Install]
-WantedBy=multi-user.target
-
 [X-Fleet]
 MachineOf=kubernetes-apiserver.service

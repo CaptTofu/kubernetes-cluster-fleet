@@ -1,7 +1,7 @@
 [Unit]
 Description=Launch dockerized kubernetes hyperkube apiserver
 After=early-docker.target docker.service network-online.target
-Before=docker.target kubernetes-controller-manager.service kubernetes-scheduler.service
+Before=docker.target
 
 [Service]
 StandardOutput=journal
@@ -39,13 +39,10 @@ ExecStart=/usr/bin/docker run \
     --portal_net=10.1.0.0/16 \ 
     --v=1 
 
-ExecStartPost=/usr/bin/etcdctl set /cplane.picasso/kubernetes_api_endpoint ${COREOS_PRIVATE_IPV4}:8080
 ExecStartPost=/usr/bin/sh -c "/usr/bin/echo -n KUBERNETES_API_ENDPOINT=${COREOS_PRIVATE_IPV4}:8080  > /etc/kube.env"
 ExecStop=/usr/bin/docker kill kubernetes-apiserver
-ExecStopPost=/usr/bin/etcdctl rm /cplane.picasso/kubernetes_api_endpoint
-
-[Install]
-WantedBy=multi-user.target
 
 [X-Fleet]
-MachineMetadata=role=master
+#MachineMetadata=role=kube-master
+#MachineMetadata=kubernetes-api-endpoint=${COREOS_PRIVATE_IP_IPV4}
+#MachineMetadata=kube-master-hostname=$(hostname)

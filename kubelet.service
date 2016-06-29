@@ -41,8 +41,5 @@ ExecStart=/usr/bin/docker run \
       --allow-privileged \
       --v=2 
 
-[Install]
-WantedBy=multi-user.target
-
 [X-Fleet]
 Global=true
