@@ -1,6 +1,6 @@
 [Unit]
 Description=Launches the kubelet service.
-After=early-docker.target docker.service network-online.target
+After=early-docker.target docker.service network-online.target kubernetes-apiserver.service
 Before=docker.target
 
 [Service]
@@ -39,6 +39,8 @@ ExecStart=/usr/bin/docker run \
       --enable-debugging-handlers=True \
       --config=/etc/kubernetes/manifests \
       --allow-privileged \
+      --cluster_dns=${KUBERNETES_DNS} \
+      --cluster_domain=${KUBERNETES_DOMAIN} \
       --v=2 
 
 [X-Fleet]

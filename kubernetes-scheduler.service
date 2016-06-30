@@ -1,6 +1,6 @@
 [Unit]
 Description=Launch dockerized kubernetes hyperkube scheduler
-After=early-docker.target docker.service network-online.target kubernetes_apiserver.service
+After=early-docker.target docker.service network-online.target kubernetes-apiserver.service
 Before=docker.target
 
 [Service]

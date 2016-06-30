@@ -1,8 +1,7 @@
 [Unit]
 Description=Sets up Kubernetes environment variables
 After=early-docker.target docker.service network-online.target
-#Before=docker.target kubernetes-apiserver kubernetes-controller-manager kubernetes-scheduler
-#Before=docker.target kubernetes-apiserver kubernetes-controller-manager kubernetes-scheduler
+Before=docker.target kubernetes-apiserver.service
 
 [Service]
 StandardOutput=journal
@@ -14,6 +13,8 @@ Environment=HYPERKUBE_VER=v1.2.4_coreos.1
 Environment=KUBERNETES_CERT_DIR=/etc/certs/kubernetes
 Environment=KUBERNETES_LOG_DIR=/var/log/kubernetes
 Environment=CLUSTER_IP_RANGE=10.1.0.0/16
+Environment=KUBERNETES_DNS=10.1.0.100
+Environment=KUBERNETES_DOMAIN=kubernetes.local
 Environment=KUBERNETES_MANIFEST_DIR=/etc/kubernetes/manifests
 Environment=KUBERNETES_API_SCHEME=http
 Environment=KUBERNETES_API_PORT=8080
@@ -28,6 +29,8 @@ ExecStart=/usr/bin/sh -c "/usr/bin/echo KUBERNETES_MANIFEST_DIR=${KUBERNETES_MAN
 ExecStart=/usr/bin/sh -c "/usr/bin/echo KUBERNETES_LOG_DIR=${KUBERNETES_LOG_DIR} >> /etc/kubernetes.env"
 ExecStart=/usr/bin/sh -c "/usr/bin/echo KUBERNETES_API_SCHEME=${KUBERNETES_API_SCHEME} >> /etc/kubernetes.env"
 ExecStart=/usr/bin/sh -c "/usr/bin/echo KUBERNETES_API_PORT=${KUBERNETES_API_PORT} >> /etc/kubernetes.env"
+ExecStart=/usr/bin/sh -c "/usr/bin/echo KUBERNETES_DNS=${KUBERNETES_DNS} >> /etc/kubernetes.env"
+ExecStart=/usr/bin/sh -c "/usr/bin/echo KUBERNETES_DOMAIN=${KUBERNETES_DOMAIN} >> /etc/kubernetes.env"
 ExecStart=/usr/bin/sh -c "/usr/bin/echo DOCKER_SOCK=${DOCKER_SOCK} >> /etc/kubernetes.env"
 
 [Install]
