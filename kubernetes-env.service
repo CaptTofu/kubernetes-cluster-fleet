@@ -20,7 +20,10 @@ Environment=KUBERNETES_API_SCHEME=http
 Environment=KUBERNETES_API_PORT=8080
 Environment=DOCKER_SOCK=/var/run/docker.sock
 ExecStartPre=-/usr/bin/bash -c "/usr/bin/systemctl set-environment HOSTS_LINE='${COREOS_PRIVATE_IPV4} $(hostname)'"
-ExecStart=/usr/bin/sh -c "echo ${HOSTS_LINE} > /tmp/foo.txt"
+# set up the /etc/hosts file with all of the system hosts
+ExecStart=/usr/bin/sh -c "for h in $(fleetctl list-machines|awk '{ print $2 }' | tail -n+2); do grep -q $h $(etcdctl get /fleet-hosts/host-$h) /etc/hosts || echo $h $(etcdctl get /fleet-hosts/host-$h) >> /etc/hosts; done"
+
+# fleetctl list-machines|awk '{ print $2 }' | tail -n+2
 ExecStart=/usr/bin/sh -c "grep -q ${HOSTS_LINE} /etc/hosts || echo ${HOSTS_LINE} >> /etc/hosts"
 ExecStart=/usr/bin/sh -c "/usr/bin/echo HYPERKUBE_IMG=${HYPERKUBE_IMG} > /etc/kubernetes.env"
 ExecStart=/usr/bin/sh -c "/usr/bin/echo HYPERKUBE_VER=${HYPERKUBE_VER} >> /etc/kubernetes.env"
