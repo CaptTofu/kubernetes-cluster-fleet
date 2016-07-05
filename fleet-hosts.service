@@ -1,0 +1,15 @@
+[Unit]
+Description=Adds IP->host entries for every node in fleet cluster 
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+Type=oneshot
+EnvironmentFile=/etc/environment
+ExecStartPre=-/usr/bin/bash -c "/usr/bin/systemctl set-environment COREOS_HOST=$(/usr/bin/hostname)"
+# mkdir has a bug where it should not print error if exists, but does
+ExecStartPre=-/usr/bin/etcdctl mkdir /fleet-hosts 2>/dev/null
+ExecStart=/usr/bin/etcdctl set /fleet-hosts/host-${COREOS_PRIVATE_IPV4} $COREOS_HOST
+
+[X-Fleet]
+Global=true

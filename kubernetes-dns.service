@@ -1,0 +1,30 @@
+[Unit]
+Description=Sets up SkyDNS on Kubernetes
+After=early-docker.target docker.service network-online.target kubelet.service
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+Type=oneshot
+Environment=KUBERNETES_DNS=10.1.0.10
+Environment=KUBERNETES_DOMAIN=kubernetes.local
+EnvironmentFile=/etc/environment
+EnvironmentFile=/etc/kubernetes.env
+ExecStartPre=-/usr/bin/bash -c "/usr/bin/systemctl set-environment KUBERNETES_API_ENDPOINT=${KUBERNETES_API_SCHEME}://$(/usr/bin/etcdctl get /registry/services/endpoints/default/kubernetes|/usr/bin/jq --raw-output '.subsets[0].addresses[0].ip'):${KUBERNETES_API_PORT}"
+ExecStartPre=-/usr/bin/mkdir -p /opt/bin
+ExecStartPre=-/usr/bin/rm /opt/bin/kubectl
+ExecStartPre=-/usr/bin/curl -L -o /opt/bin/kubectl -z /opt/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.2.4/bin/linux/amd64/kubectl 
+ExecStartPre=/usr/bin/chmod +x /opt/bin/kubectl
+ExecStartPre=-/usr/bin/mkdir -p /etc/kubernetes
+ExecStartPre=-/usr/bin/rm /etc/kubernetes/dns-controller.yaml 
+ExecStartPre=-/usr/bin/rm /etc/kubernetes/dns-service.yaml 
+ExecStartPre=-/usr/bin/curl -L -o /etc/kubernetes/dns-controller.yaml -z /etc/kubernetes/dns-controller.yaml https://raw.githubusercontent.com/CaptTofu/kubernetes-cluster-fleet/master/dns-controller.yaml 
+ExecStartPre=-/usr/bin/curl -L -o /etc/kubernetes/dns-service.yaml -z /etc/kubernetes/dns-service.yaml https://raw.githubusercontent.com/CaptTofu/kubernetes-cluster-fleet/master/dns-service.yaml 
+
+ExecStart=/usr/bin/sed -e "s|KUBERNETES_API_ENDPOINT|${KUBERNETES_API_ENDPOINT}|g" -e "s|KUBERNETES_DOMAIN|${KUBERNETES_DOMAIN}|g" -i /etc/kubernetes/dns-controller.yaml
+ExecStart=/usr/bin/sed -e "s|KUBERNETES_DNS|${KUBERNETES_DNS}|g" -i /etc/kubernetes/dns-service.yaml  
+ExecStart=/opt/bin/kubectl create -f /etc/kubernetes/dns-controller.yaml --server=${KUBERNETES_API_ENDPOINT}  
+ExecStart=/opt/bin/kubectl create -f /etc/kubernetes/dns-service.yaml --server=${KUBERNETES_API_ENDPOINT}  
+
+[X-Fleet]
+MachineOf=kubernetes-apiserver.service
